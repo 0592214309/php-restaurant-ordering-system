@@ -3,34 +3,27 @@
 // This page is beginner-friendly with step-by-step comments
 include '../config/db.php';
 
-// Variable to store success/error messages
+include '../auth/verify.php'; // Require login
 $message = '';
-
-// When user submits the order form
+$user_id = $_SESSION['user_id'];
+$user_name = $_SESSION['full_name'];
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // Get customer information from the form
-    $customer_name = trim($_POST['customer_name'] ?? '');
     $customer_phone = trim($_POST['customer_phone'] ?? '');
     $selected_items = $_POST['items'] ?? [];
-    
-    // Check if customer provided a name and phone
-    if (empty($customer_name)) {
-        $message = 'Please enter your name';
-    } elseif (empty($customer_phone)) {
+    if (empty($customer_phone)) {
         $message = 'Please enter your phone number';
     } elseif (empty($selected_items)) {
         $message = 'Please select at least one item';
     } else {
-        // Calculate total amount and prepare items
         $total_amount = 0;
         $order_items = [];
-        
         foreach ($selected_items as $item_id => $quantity) {
             if ($quantity > 0) {
-                // Get item price from database
-                $item_sql = "SELECT item_name, price FROM menu_items WHERE item_id = " . intval($item_id);
-                $item_result = $conn->query($item_sql);
-                
+                $item_sql = "SELECT item_name, price FROM menu_items WHERE item_id = ?";
+                $item_stmt = $conn->prepare($item_sql);
+                $item_stmt->bind_param('i', $item_id);
+                $item_stmt->execute();
+                $item_result = $item_stmt->get_result();
                 if ($item_result && $item_result->num_rows > 0) {
                     $item = $item_result->fetch_assoc();
                     $subtotal = $item['price'] * $quantity;
@@ -42,19 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         'name' => $item['item_name']
                     ];
                 }
+                $item_stmt->close();
             }
         }
-        
-        // If there are items, insert order into database
         if (!empty($order_items)) {
-            // Step 1: Insert order into orders table
-            $insert_order_sql = "INSERT INTO orders (customer_name, customer_phone, total_amount) VALUES (?, ?, ?)";
+            $insert_order_sql = "INSERT INTO orders (user_id, customer_name, customer_phone, total_amount) VALUES (?, ?, ?, ?)";
             $stmt = $conn->prepare($insert_order_sql);
-            $stmt->bind_param('ssd', $customer_name, $customer_phone, $total_amount);
+            $stmt->bind_param('issd', $user_id, $user_name, $customer_phone, $total_amount);
             $stmt->execute();
             $order_id = $stmt->insert_id;
-            
-            // Step 2: Insert each selected item into order_items table
+            $stmt->close();
             foreach ($order_items as $item_id => $item_data) {
                 $insert_item_sql = "INSERT INTO order_items (order_id, item_id, quantity, price_at_order, subtotal) VALUES (?, ?, ?, ?, ?)";
                 $item_stmt = $conn->prepare($insert_item_sql);
@@ -65,10 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $item_stmt->execute();
                 $item_stmt->close();
             }
-            
-            // Success! Show confirmation
             $message = 'Order placed successfully! Order ID: ' . $order_id . ' | Total: GHS ' . number_format($total_amount, 2);
-            $stmt->close();
         } else {
             $message = 'Please select at least one item';
         }
@@ -193,6 +180,7 @@ if ($result && $result->num_rows > 0) {
     </style>
 </head>
 <body>
+    <?php include '../includes/navbar.php'; ?>
     <div class="header">Place Your Order</div>
     
     <?php if ($message): ?>
@@ -202,18 +190,13 @@ if ($result && $result->num_rows > 0) {
     <?php endif; ?>
     
     <form method="POST" class="order-form">
-        <!-- Customer Name -->
-        <div class="form-group">
-            <label for="customer_name">Your Name</label>
-            <input type="text" id="customer_name" name="customer_name" placeholder="Enter your name" required>
-        </div>
-        
+        <!-- Welcome message with user name -->
+        <div style="text-align:center; color:#4285F4; font-weight:bold; margin-bottom:1rem;">Welcome, <?php echo htmlspecialchars($user_name); ?>!</div>
         <!-- Customer Phone -->
         <div class="form-group">
             <label for="customer_phone">Your Phone Number</label>
             <input type="tel" id="customer_phone" name="customer_phone" placeholder="Enter your phone number" required>
         </div>
-        
         <!-- Menu Items Organized by Category -->
         <div class="form-group">
             <label>Select Items (Enter Quantity)</label>
@@ -229,7 +212,6 @@ if ($result && $result->num_rows > 0) {
                 </div>
             <?php endforeach; ?>
         </div>
-        
         <!-- Submit Button -->
         <button type="submit" class="submit-btn">Place Order</button>
     </form>

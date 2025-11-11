@@ -58,3 +58,25 @@ if ($sample_result && $sample_result->num_rows > 0) {
 echo "\n=== All Tests Complete ===\n";
 echo "If all tests show ✅ SUCCESS, you're ready to use the app!\n";
 ?>
+
+// Extra Phase 2 Tests: users table and sample admin check
+echo "\n=== Phase 2 Checks ===\n";
+echo "6. Users Table: ";
+$users_result = $conn->query("SELECT COUNT(*) as count FROM users");
+if ($users_result) {
+    $row = $users_result->fetch_assoc();
+    echo "✅ SUCCESS - Found " . $row['count'] . " users\n";
+} else {
+    echo "❌ FAILED - " . $conn->error . "\n";
+}
+
+echo "7. Sample Admin (optional): ";
+$admin_result = $conn->query("SELECT user_id, email FROM users WHERE role = 'admin' LIMIT 1");
+if ($admin_result && $admin_result->num_rows > 0) {
+    $a = $admin_result->fetch_assoc();
+    echo "✅ Found admin: " . htmlspecialchars($a['email']) . " (id:" . $a['user_id'] . ")\n";
+} else {
+    echo "ℹ️ No admin user found. You can create one via phpMyAdmin or the registration page and set role='admin'.\n";
+}
+
+echo "\n=== Phase 2 Tests Complete ===\n";
