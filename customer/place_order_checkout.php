@@ -11,11 +11,14 @@ if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
 
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $delivery_phone = trim($_POST['delivery_phone'] ?? '');
-    
-    if (empty($delivery_phone)) {
-        $message = 'Please enter delivery phone number.';
+    include '../admin/csrf.php';
+    if (!isset($_POST['csrf_token']) || !validate_csrf($_POST['csrf_token'])) {
+        $message = 'Invalid request (CSRF). Please refresh and try again.';
     } else {
+        $delivery_phone = trim($_POST['delivery_phone'] ?? '');
+        if (empty($delivery_phone)) {
+            $message = 'Please enter delivery phone number.';
+        } else {
         // Get user info
         $user_id = $_SESSION['user_id'];
         $user_sql = "SELECT full_name FROM users WHERE user_id = ?";
@@ -120,6 +123,7 @@ while ($row = $items_result->fetch_assoc()) {
         </div>
         
         <form method="POST">
+            <?php include '../admin/csrf.php'; echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(get_csrf_token()) . '">'; ?>
             <div class="form-group">
                 <label for="delivery_phone">Delivery Phone Number *</label>
                 <input type="text" id="delivery_phone" name="delivery_phone" placeholder="0240000000" required>

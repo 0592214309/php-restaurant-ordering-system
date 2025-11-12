@@ -58,6 +58,25 @@ body {
 .nav-link:hover {
   background: rgba(255,255,255,0.1);
 }
+
+/* ============ CART COUNT BADGE ============ */
+.cart-badge {
+  display: inline-block;
+  min-width: 22px;
+  padding: 0 6px;
+  height: 22px;
+  font-size: 0.85rem;
+  background: #d32f2f;
+  color: white;
+  border-radius: 12px;
+  font-weight: bold;
+  text-align: center;
+  margin-left: 6px;
+  vertical-align: middle;
+  box-shadow: 0 2px 6px rgba(211,47,47,0.10);
+  position: relative;
+  top: -2px;
+}
 .nav-user {
   color: white;
   font-weight: bold;

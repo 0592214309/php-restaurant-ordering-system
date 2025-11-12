@@ -3,8 +3,6 @@
 // Shows menu items from database
 // All code is commented for beginners
 // --- DEBUG: Show errors ---
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 include 'config/db.php'; // Connect to database
 
@@ -12,10 +10,6 @@ include 'config/db.php'; // Connect to database
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-echo '<div style="background:#fff3cd;color:#856404;padding:0.5rem 1rem;margin:1rem;border-radius:6px;font-size:0.95rem;">';
-echo '<strong>DEBUG:</strong> Session user_id: ' . (isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 'none');
-echo ' | DB connection: ' . ($conn ? 'OK' : 'FAIL');
-echo '</div>';
 ?>
 <!DOCTYPE html>
 <html lang="en">
