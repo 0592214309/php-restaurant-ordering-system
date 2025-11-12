@@ -2,8 +2,6 @@
 // Edit Menu Item (Admin only)
 include '../config/db.php';
 include 'verify_admin.php';
-include 'csrf.php';
-$csrf_token = get_csrf_token();
 
 $item_id = intval($_GET['id'] ?? 0);
 if (!$item_id) {
@@ -29,53 +27,41 @@ if (!$item) {
 
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Validate CSRF token
-    if (!isset($_POST['csrf_token']) || !validate_csrf($_POST['csrf_token'])) {
-        $message = 'Invalid request (CSRF).';
-    } else {
-        $item_name = trim($_POST['item_name'] ?? '');
-        $category_id = intval($_POST['category_id'] ?? 0);
-        $description = trim($_POST['description'] ?? '');
-        $price = floatval($_POST['price'] ?? 0);
-        $is_available = isset($_POST['is_available']) ? 1 : 0;
-        $image_url = $item['image_url'];
+    $item_name = trim($_POST['item_name'] ?? '');
+    $category_id = intval($_POST['category_id'] ?? 0);
+    $description = trim($_POST['description'] ?? '');
+    $price = floatval($_POST['price'] ?? 0);
+    $is_available = isset($_POST['is_available']) ? 1 : 0;
+    $image_url = $item['image_url'];
 
-        // Handle image upload
-        if (!empty($_FILES['image']['name'])) {
-            $target_dir = '../assets/images/';
-            if (!is_dir($target_dir)) {
-                mkdir($target_dir, 0777, true);
-            }
-            $filename = basename($_FILES['image']['name']);
-            $target_file = $target_dir . time() . '_' . $filename;
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-                $image_url = str_replace('../', '', $target_file);
-            } else {
-                $message = 'Image upload failed.';
-            }
+    // Handle image upload
+    if (!empty($_FILES['image']['name'])) {
+        $target_dir = '../assets/images/';
+        if (!is_dir($target_dir)) {
+            mkdir($target_dir, 0777, true);
         }
-
-        // Basic validation
-        if (!$item_name || !$category_id || $price <= 0) {
-            $message = 'Please fill all required fields and enter a valid price.';
+        $filename = basename($_FILES['image']['name']);
+        $target_file = $target_dir . time() . '_' . $filename;
+        if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+            $image_url = str_replace('../', '', $target_file);
         } else {
-            $sql = "UPDATE menu_items SET category_id=?, item_name=?, description=?, price=?, image_url=?, is_available=? WHERE item_id=?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param('issdsii', $category_id, $item_name, $description, $price, $image_url, $is_available, $item_id);
-            if ($stmt->execute()) {
-                $message = 'Menu item updated successfully!';
-                // Refresh item data
-                $stmt->close();
-                $stmt2 = $conn->prepare("SELECT * FROM menu_items WHERE item_id = ?");
-                $stmt2->bind_param('i', $item_id);
-                $stmt2->execute();
-                $item = $stmt2->get_result()->fetch_assoc();
-                $stmt2->close();
-            } else {
-                $message = 'Error updating menu item.';
-                $stmt->close();
-            }
+            $message = 'Image upload failed.';
         }
+    }
+
+    // Basic validation
+    if (!$item_name || !$category_id || $price <= 0) {
+        $message = 'Please fill all required fields and enter a valid price.';
+    } else {
+        $sql = "UPDATE menu_items SET category_id=?, item_name=?, description=?, price=?, image_url=?, is_available=? WHERE item_id=?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('issdsii', $category_id, $item_name, $description, $price, $image_url, $is_available, $item_id);
+        if ($stmt->execute()) {
+            $message = 'Menu item updated successfully!';
+        } else {
+            $message = 'Error updating menu item.';
+        }
+        $stmt->close();
     }
 }
 ?>
@@ -108,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="message <?php echo (strpos($message, 'success') !== false) ? 'success' : ''; ?>"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
         <form method="POST" enctype="multipart/form-data">
-            <?php echo '<input type="hidden" name="csrf_token" value="' . htmlspecialchars($_SESSION['csrf_token']) . '">'; ?>
             <div class="form-group">
                 <label for="item_name">Item Name *</label>
                 <input type="text" id="item_name" name="item_name" value="<?php echo htmlspecialchars($item['item_name']); ?>" required>
